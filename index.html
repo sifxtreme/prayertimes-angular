@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html ng-app="prayerApp">
+<head>  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, user-scalable=no">
+</head>
+<body ng-controller="prayerCtrl">
+
+{{times}}
+
+<script type="text/javascript" src="praytimes.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.13/angular.min.js"></script>
+<script type="text/javascript">
+angular.module('prayerApp', [])
+	.controller('prayerCtrl', ['$scope', '$http', '$timeout', function($scope, $http, $timeout){
+
+		var getLocation = function(){
+			if(navigator.geolocation){
+				console.log("getLocation");
+				navigator.geolocation.getCurrentPosition(function(position){
+					$scope.latitude = position.coords.latitude;
+					$scope.longitude = position.coords.longitude;
+					$scope.$apply(getPrayerTimes());
+				},
+				function(error){
+					console.log("ERROR");
+					console.log(error);	
+				},
+				{enableHighAccuracy:true, maximumAge:30000, timeout:27000});
+			}
+		}
+
+		var getPrayerTimes = function(){
+			console.log("getPrayerTimes");
+			var d = new Date();
+			var offset = d.getTimezoneOffset();
+			var prayerOffset = offset / 60 * -1;
+			$scope.times = prayTimes.getTimes(d, [$scope.latitude, $scope.longitude], prayerOffset);
+			console.log($scope.times);
+			// "https://maps.googleapis.com/maps/api/timezone/outputFormat?parameters"
+			$scope.$apply();
+		}
+
+		getLocation();
+
+		
+	}])
+		
+</script>
+
+</body>
+</html>
