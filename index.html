@@ -7,15 +7,15 @@
 <body ng-controller="prayerCtrl">
 
 <div>
-	{{prayerTimesCalcArray}}
+	{{clock | date : "hh:mm:ss a"}}
 </div>
 
 <div>
-	{{clock | date : "hh:mm a"}}
+	{{currentPrayerString}}
 </div>
 
 <div>
-	NEXT PRAYER = {{nextPrayer}}
+	{{timeTillNextPrayerString}} {{nextPrayer.name}}
 </div>
 
 <script type="text/javascript" src="praytimes.js"></script>
@@ -42,63 +42,55 @@ angular.module('prayerApp', [])
 			}
 		}
 
-		calculateCurrentPrayer = function(time, prayerArray){
-			if(!prayerTimesSet){
-				return;
+		calculateNextPrayerIndex = function(time, prayerArray){
+			var currentTimeAway = 24;
+			var currentPrayerIndex = 5;
+
+			var nextTimeAway = 24;
+			var nextPrayerIndex = 0;
+
+			for(var i=0; i<prayerArray.length; i++){
+				
+				var currentDifference = time -  prayerArray[i];
+				var nextDifference = prayerArray[i] - time;
+
+				if(currentDifference < currentTimeAway && currentDifference > 0){
+					currentTimeAway = currentDifference;
+					currentPrayerIndex = i;
+				}
+				if(nextDifference < nextTimeAway && nextDifference > 0){
+					nextTimeAway = nextDifference;
+					nextPrayerIndex = i;
+				}
+			}
+
+			return nextPrayerIndex;
+		}
+
+		var timeTillNextPrayer = function(time, nextTime){
+			var minutes = Math.round((((nextTime - time)+24)%24)*60);
+			if(minutes < 60){
+				return minutes + " minute"+(parseInt(minutes) == 1 ? "" : "s")+" till";
 			}
 			else{
-				var timeNow = new Date(time);
-				var timeNowDecimal = timeNow.getHours() + timeNow.getMinutes()/60;
-
-				var currentTimeAway = 24;
-				var currentPrayerIndex = 5;
-
-				for(var i=0; i<prayerArray.length; i++){
-					
-					var pTime = prayerArray[i].values[0] + prayerArray[i].values[1]/60;
-					var currentDifference = timeNowDecimal -  pTime;
-
-					if(currentDifference < currentTimeAway && currentDifference > 0){
-						currentTimeAway = currentDifference;
-						currentPrayerIndex = i;
-					}
-				}
-
-				return prayerArray[currentPrayerIndex]
+				return "More than " + parseInt(minutes/60) + " hour"+(parseInt(minutes/60) == 1 ? "" : "s")+" till";
 			}
 		}
 
-		calculateNextPrayer = function(time, prayerArray){
-			if(!prayerTimesSet){
-				return;
-			}
-			else{
-				var timeNow = new Date(time);
-				var timeNowArray = [timeNow.getHours(), timeNow.getMinutes()];
-				
-				var timeAway = 24;
-				var selectedIndex = 0;
-				
-				for(var i=0; i<prayerArray.length; i++){
-					var hourDifference = prayerArray[i].values[0] - timeNowArray[0];
-					var minuteDifference = prayerArray[i].values[1] - timeNowArray[1];
-					if((hourDifference > 0 && hourDifference < timeAway) || (hourDifference == 0 && minuteDifference > 0)){
-						console.log('tru');
-						timeAway = hourDifference;
-						selectedIndex = i;
-					}
-				}
-				return prayerArray[selectedIndex];
-				
-			}
-		}
-
-		$scope.clock = Date.now();
-		var second = 1000;
-		var minute = 60*second;
-		$interval(function(){
+		var onUpdateTime = function(){
 			$scope.clock = Date.now();
-		}, minute)
+			var timeNow = new Date($scope.clock);
+			var timeNowDecimal = timeNow.getHours() + timeNow.getMinutes()/60;
+			getCurrentAndNextPrayer(timeNowDecimal);
+		}
+
+		var setUpTime = function(){
+			$scope.clock = Date.now();
+			var second = 1000;
+			var minute = 60*second;
+			$interval(onUpdateTime, second)
+		}
+
 
 		var filterPrayerTimesForDisplay = function(prayerTimes){
 			return [
@@ -122,29 +114,132 @@ angular.module('prayerApp', [])
 			]
 		}
 
-		var otherStuff = function(){
-			$scope.prayerTimesDisplayArray = filterPrayerTimesForDisplay($scope.times);
-			v = filterPrayerTimesForDisplay($scope.times);
-			$scope.prayerTimesCalcArray = filterPrayerTimesForCalculations($scope.prayerTimesDisplayArray);
+		var getCurrentAndNextPrayer = function(timeNowDecimal){
+			if(!prayerTimesSet){ return; }
 
-			// $scope.nextPrayer = calculateNextPrayer($scope.clock, $scope.prayerTimesArray);
-			// v = calculateCurrentPrayer($scope.clock, $scope.prayerTimesArray);
-			// "https://maps.googleapis.com/maps/api/timezone/outputFormat?parameters"
+			var nextPrayerIndex = calculateNextPrayerIndex(timeNowDecimal, $scope.prayerTimesCalcArray);
+			var currentPrayerIndex = 0;
+
+			currentPrayerIndex = nextPrayerIndex - 1;
+			if(currentPrayerIndex < 0) currentPrayerIndex = 5;
+			if(currentPrayerIndex == 1) currentPrayerIndex = 100;
+			if(nextPrayerIndex == 1) nextPrayerIndex = 2;
+
+			// console.log("C"+timeNowDecimal + " - " + currentPrayerIndex + '|' + nextPrayerIndex);
+
+			if(currentPrayerIndex != 100){
+				$scope.currentPrayerString = "IT'S " + $scope.prayerTimesDisplayArray[currentPrayerIndex].name.toUpperCase() + " TIME";	
+			}
+			else{
+				$scope.currentPrayerString = "NO FARD RIGHT NOW";
+			}
+			
+			$scope.nextPrayer = $scope.prayerTimesDisplayArray[nextPrayerIndex];
+			$scope.timeTillNextPrayerString = timeTillNextPrayer(timeNowDecimal, $scope.prayerTimesCalcArray[nextPrayerIndex]);
+		}
+
+		var setUpArrays = function(){
+			$scope.prayerTimesDisplayArray = filterPrayerTimesForDisplay($scope.times);
+			$scope.prayerTimesCalcArray = filterPrayerTimesForCalculations($scope.prayerTimesDisplayArray);
+			console.log($scope.prayerTimesDisplayArray);
 		}
 
 		var getPrayerTimes = function(){
-			console.log("getPrayerTimes");
 			var d = new Date();
 			var offset = d.getTimezoneOffset();
 			var prayerOffset = offset / 60 * -1;
 			$scope.times = prayTimes.getTimes(d, [$scope.latitude, $scope.longitude], prayerOffset);
 			prayerTimesSet = true;
 
-			otherStuff();
-		}			
+			setUpArrays();
+			onUpdateTime();
+			// runTests();
+		}
+
+		var init = function(){
+			setUpTime();
+			getLocation();
+		}
+
+		init();
+
+		// test code
+		var runTests = function(){
+			console.log("\n0.0 - 5|0");
+			getCurrentAndNextPrayer("0.0")
+
+			console.log("\n1.0 - 5|0");
+			getCurrentAndNextPrayer("1.0")
+
+			console.log("\n2.0 - 5|0");
+			getCurrentAndNextPrayer("2.0")
+
+			console.log("\n3.0 - 5|0");
+			getCurrentAndNextPrayer("3.0")
+
+			console.log("\n4.0 - 5|0");
+			getCurrentAndNextPrayer("4.0")
+
+			console.log("\n5.0 - 5|0");
+			getCurrentAndNextPrayer("5.0")
+
+			console.log("\n6.0 - 0|*");
+			getCurrentAndNextPrayer("6.0")
+
+			console.log("\n7.0 - *|2");
+			getCurrentAndNextPrayer("7.0")
+
+			console.log("\n8.0 - *|2");
+			getCurrentAndNextPrayer("8.0")
+
+			console.log("\n9.0 - *|2");
+			getCurrentAndNextPrayer("9.0")
+
+			console.log("\n10.0 - *|2");
+			getCurrentAndNextPrayer("10.0")
+
+			console.log("\n11.0 - *|2");
+			getCurrentAndNextPrayer("11.0")
+
+			console.log("\n12.0 - *|2");
+			getCurrentAndNextPrayer("12.0")
+
+			console.log("\n13.0 - 2|3");
+			getCurrentAndNextPrayer("13.0")
+
+			console.log("\n14.0 - 2|3");
+			getCurrentAndNextPrayer("14.0")
+
+			console.log("\n15.0 - 2|3");
+			getCurrentAndNextPrayer("15.0")
+
+			console.log("\n16.0 - 3|4");
+			getCurrentAndNextPrayer("16.0")
+
+			console.log("\n17.0 - 3|4");
+			getCurrentAndNextPrayer("17.0")
+
+			console.log("\n18.0 - 4|5");
+			getCurrentAndNextPrayer("18.0")
+
+			console.log("\n19.0 - 5|0");
+			getCurrentAndNextPrayer("19.0")
+
+			console.log("\n20.0 - 5|0");
+			getCurrentAndNextPrayer("20.0")
+
+			console.log("\n21.0 - 5|0");
+			getCurrentAndNextPrayer("21.0")
+
+			console.log("\n22.0 - 5|0");
+			getCurrentAndNextPrayer("22.0")
+
+			console.log("\n23.0 - 5|0");
+			getCurrentAndNextPrayer("23.0")
+
+		}
 
 
-		getLocation();
 
 		
 	}])
