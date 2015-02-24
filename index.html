@@ -3,19 +3,34 @@
 <head>  
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, user-scalable=no">
+  <style type="text/css">
+		body, h1, h2, h3 {
+		   font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
+		   font-weight: 300;
+		   font-size: 24px;
+		   color: white;
+		}
+
+  </style>
 </head>
 <body ng-controller="prayerCtrl">
 
-<div>
-	{{clock | date : "hh:mm:ss a"}}
-</div>
+<div style="width:500px; height: 800px; background: linear-gradient(to bottom, {{topColor}}, {{bottomColor}}">
+	<div>
+		{{clock | date : "hh:mm:ss a"}}
+	</div>
 
-<div>
-	{{currentPrayerString}}
-</div>
+	<div>
+		{{currentPrayerString}}
+	</div>
 
-<div>
-	{{timeTillNextPrayerString}} {{nextPrayer.name}}
+	<div>
+		{{timeTillNextPrayerString}} {{nextPrayer.name}}
+	</div>
+
+	<div id="test">
+		{{minutesSinceStart}} - {{minutesTillNext}}
+	</div>
 </div>
 
 <script type="text/javascript" src="praytimes.js"></script>
@@ -23,6 +38,52 @@
 <script type="text/javascript">
 angular.module('prayerApp', [])
 	.controller('prayerCtrl', ['$scope', '$http', '$timeout', '$interval', function($scope, $http, $timeout, $interval){
+
+		var colors = {
+			Fajr: { start: {r: 154, g: 94, b: 247}, end: {r: 247, g: 145, b: 111} },
+			Sunrise: { start: {r: 247, g: 145, b: 111}, end: {r: 185, g: 228, b: 246} },
+			Dhuhr: { start: {r: 185, g: 228, b: 246}, end: {r: 63, g: 169, b: 245} },
+			Asr: { start: {r: 63, g: 169, b: 245}, end: {r: 251, g: 121, b: 120} },
+			Maghrib: { start: {r: 251, g: 121, b: 120}, end: {r: 1, g: 82, b: 180} },
+			Isha: { start: {r: 1, g: 82, b: 180}, end: {r: 154, g: 94, b: 247} },
+		}
+
+		var makeColorPiece = function(num){
+			num = Math.min(num, 255);   // not more than 255
+			num = Math.max(num, 0);     // not less than 0
+			var str = num.toString(16);
+			if (str.length < 2) {
+			    str = "0" + str;
+			}
+			return(str);
+		}
+
+		convertToHexString = function(colorRGB){
+			return "#" + makeColorPiece(colorRGB.r) + makeColorPiece(colorRGB.g) + makeColorPiece(colorRGB.b);
+		}
+
+		var makeGradientColor = function(color1, color2, percent){
+			var newColor = {};
+
+			function makeChannel(a, b) {
+	      return(a + Math.round((b-a)*(percent/100)));
+	    }
+
+	    newColor.r = makeChannel(color1.r, color2.r);
+	    newColor.g = makeChannel(color1.g, color2.g);
+	    newColor.b = makeChannel(color1.b, color2.b);
+
+	    return newColor;
+		}
+
+		var setColor = function(){
+			var percentageOfSectionPassed = ($scope.minutesSinceStart*100) / ($scope.minutesSinceStart + $scope.minutesTillNext)
+			console.log(percentageOfSectionPassed);
+			$scope.topColor = convertToHexString(makeGradientColor(colors[$scope.currentPrayerName].start, colors[$scope.currentPrayerName].end, percentageOfSectionPassed));
+			$scope.bottomColor = convertToHexString(colors[$scope.currentPrayerName].end)
+		}
+
+
 
 		var prayerTimesSet = false;
 
@@ -67,8 +128,15 @@ angular.module('prayerApp', [])
 			return nextPrayerIndex;
 		}
 
-		var timeTillNextPrayer = function(time, nextTime){
-			var minutes = Math.round((((nextTime - time)+24)%24)*60);
+		var minutesSinceBeginningOfCurrentPrayer = function(time, beginningTime){
+			return Math.round((((time - beginningTime)+24)%24)*60);
+		}
+
+		var minutesTillNextPrayer = function(time, nextTime){
+			return Math.round((((nextTime - time)+24)%24)*60);
+		}
+
+		var timeTillNextPrayerString = function(minutes){
 			if(minutes < 60){
 				return minutes + " minute"+(parseInt(minutes) == 1 ? "" : "s")+" till";
 			}
@@ -77,11 +145,19 @@ angular.module('prayerApp', [])
 			}
 		}
 
+		var secondCounter = 0;
 		var onUpdateTime = function(){
 			$scope.clock = Date.now();
 			var timeNow = new Date($scope.clock);
 			var timeNowDecimal = timeNow.getHours() + timeNow.getMinutes()/60;
 			getCurrentAndNextPrayer(timeNowDecimal);
+
+			if(secondCounter >= 5){
+				secondCounter = 0;
+				setColor();
+				console.log("running");
+			}
+			secondCounter++;
 		}
 
 		var setUpTime = function(){
@@ -127,15 +203,20 @@ angular.module('prayerApp', [])
 
 			// console.log("C"+timeNowDecimal + " - " + currentPrayerIndex + '|' + nextPrayerIndex);
 
+			$scope.currentPrayerName = $scope.prayerTimesDisplayArray[currentPrayerIndex].name
+
+			$scope.minutesSinceStart = minutesSinceBeginningOfCurrentPrayer(timeNowDecimal, $scope.prayerTimesCalcArray[currentPrayerIndex]);
+			$scope.minutesTillNext = minutesTillNextPrayer(timeNowDecimal, $scope.prayerTimesCalcArray[nextPrayerIndex]);
+
 			if(currentPrayerIndex != 100){
-				$scope.currentPrayerString = "IT'S " + $scope.prayerTimesDisplayArray[currentPrayerIndex].name.toUpperCase() + " TIME";	
+				$scope.currentPrayerString = "IT'S " + $scope.currentPrayerName.toUpperCase() + " TIME";	
 			}
 			else{
 				$scope.currentPrayerString = "NO FARD RIGHT NOW";
 			}
 			
 			$scope.nextPrayer = $scope.prayerTimesDisplayArray[nextPrayerIndex];
-			$scope.timeTillNextPrayerString = timeTillNextPrayer(timeNowDecimal, $scope.prayerTimesCalcArray[nextPrayerIndex]);
+			$scope.timeTillNextPrayerString = timeTillNextPrayerString($scope.minutesTillNext);
 		}
 
 		var setUpArrays = function(){
@@ -153,6 +234,7 @@ angular.module('prayerApp', [])
 
 			setUpArrays();
 			onUpdateTime();
+			setColor();
 			// runTests();
 		}
 
