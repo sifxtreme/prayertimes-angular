@@ -3,29 +3,39 @@
 <head>  
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, user-scalable=no">
-  <style type="text/css">
-		body, h1, h2, h3 {
-		   font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
-		   font-weight: 300;
-		   font-size: 24px;
-		   color: white;
-		}
-
-  </style>
+  <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body ng-controller="prayerCtrl">
 
-<div style="width:500px; height: 800px; background: linear-gradient(to bottom, {{topColor}}, {{bottomColor}}">
-	<div>
+<div id="main" style="background: linear-gradient(to bottom, {{topColor}}, {{bottomColor}}">
+
+	<div id="clock">
 		{{clock | date : "hh:mm:ss a"}}
 	</div>
 
-	<div>
-		{{currentPrayerString}}
-	</div>
+	<section>
+		<div id="currentPrayer">
+			{{currentPrayerString}}
+		</div>
+		<div id="currentPrayerTime">
+			{{currentPrayerTime}}
+		</div>
+		<div id="till">
+			{{timeTillNextPrayerString}} {{nextPrayer.name}}
+		</div>
+	</section>
 
-	<div>
-		{{timeTillNextPrayerString}} {{nextPrayer.name}}
+	<div id="times">
+	<div class="col">
+		<p>FAJR:</p><p class="actual-time">{{convertTimeValueForDisplay(prayerTimesDisplayArray[0].values)}}</p>
+		<p>SUNRISE:</p><p class="actual-time">{{convertTimeValueForDisplay(prayerTimesDisplayArray[1].values)}}</p>
+		<p>DHUHR:</p><p class="actual-time">{{convertTimeValueForDisplay(prayerTimesDisplayArray[2].values)}}</p>
+	</div>
+	<div class="col">
+		<p>ASR:</p><p class="actual-time">{{convertTimeValueForDisplay(prayerTimesDisplayArray[3].values)}}</p>
+		<p>MAGHRIB:</p><p class="actual-time">{{convertTimeValueForDisplay(prayerTimesDisplayArray[4].values)}}</p>
+		<p>ISHA:</p><p class="actual-time">{{convertTimeValueForDisplay(prayerTimesDisplayArray[5].values)}}</p>
+	</div>
 	</div>
 
 	<div id="test">
@@ -78,14 +88,9 @@ angular.module('prayerApp', [])
 
 		var setColor = function(){
 			var percentageOfSectionPassed = ($scope.minutesSinceStart*100) / ($scope.minutesSinceStart + $scope.minutesTillNext)
-			console.log(percentageOfSectionPassed);
 			$scope.topColor = convertToHexString(makeGradientColor(colors[$scope.currentPrayerName].start, colors[$scope.currentPrayerName].end, percentageOfSectionPassed));
 			$scope.bottomColor = convertToHexString(colors[$scope.currentPrayerName].end)
 		}
-
-
-
-		var prayerTimesSet = false;
 
 		var getLocation = function(){
 			if(navigator.geolocation){
@@ -190,6 +195,24 @@ angular.module('prayerApp', [])
 			]
 		}
 
+		$scope.convertTimeValueForDisplay = function(time){
+			if(typeof time !== "object"){
+				return;
+			}
+			var isAmOrPm = 0;
+			var hours = time[0];
+			var minutes = time[1];
+			if(hours / 12 >= 1){
+				isAmOrPm = 1;
+				hours = hours % 12;
+			}
+			if(hours == 0){
+				hours = 12;
+			}
+
+			return hours + ":" + minutes + (isAmOrPm ? " PM" : " AM")
+		}
+
 		var getCurrentAndNextPrayer = function(timeNowDecimal){
 			if(!prayerTimesSet){ return; }
 
@@ -204,6 +227,7 @@ angular.module('prayerApp', [])
 			// console.log("C"+timeNowDecimal + " - " + currentPrayerIndex + '|' + nextPrayerIndex);
 
 			$scope.currentPrayerName = $scope.prayerTimesDisplayArray[currentPrayerIndex].name
+			$scope.currentPrayerTime = $scope.convertTimeValueForDisplay($scope.prayerTimesDisplayArray[currentPrayerIndex].values)
 
 			$scope.minutesSinceStart = minutesSinceBeginningOfCurrentPrayer(timeNowDecimal, $scope.prayerTimesCalcArray[currentPrayerIndex]);
 			$scope.minutesTillNext = minutesTillNextPrayer(timeNowDecimal, $scope.prayerTimesCalcArray[nextPrayerIndex]);
@@ -238,6 +262,7 @@ angular.module('prayerApp', [])
 			// runTests();
 		}
 
+		var prayerTimesSet = false;
 		var init = function(){
 			setUpTime();
 			getLocation();
@@ -321,9 +346,6 @@ angular.module('prayerApp', [])
 
 		}
 
-
-
-		
 	}])
 		
 </script>
