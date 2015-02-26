@@ -75,35 +75,58 @@ html, body, #main {
 
 #clock {
 	padding-top: 10px;
-	font-size: 16px;
 }
 
-#currentPrayerTime {
-	font-size: 96px;
+#main #currentPrayerTime {
+	font-size: 30px;
+	text-transform: uppercase;
+	margin-top: 5px;
+	margin-bottom: 5px;
 }
 
-#main section{
+#main section.headlines{
 	top: 50%;
 	left: 0;
 	right: 0;
 	position: fixed;
 	margin-top: -96px;
+	font-size: 18px;
 }
 
 #times {
+	font-size: 16px;
+}
+
+.col p {
+	float: left;
+	width: 50%;
+	box-sizing: border-box;
+	padding-right: 5px;
+	padding-left: 5px;
+	padding-bottom: 3px;
+}
+
+.actual-time {
+	text-align: right;
+}
+
+.clear {
+	clear: both;
+}
+
+#times section {
+	position: fixed;
+	bottom: 0;
 	width: 100%;
 	max-width: 960px;
 	margin: 0 auto;
-	position: fixed;
-	bottom: 10px;
-	left: 0;
-	right: 0;
 }
-
 
 
 #times .col {
 	float: left;
 	width: 50%;
+	box-sizing: border-box;
+	padding-bottom: 10px;
 }
 
