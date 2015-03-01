@@ -12,17 +12,18 @@
 
 	<section ng-show="showOptions">
 		<input type="text" placeholder="Enter your location" g-places-autocomplete ng-model="place" />
+		<input type="date" ng-model="newDate" />
 	</section>
 
 	<section class="header">
 		<div ng-click="showOptionsView()" class="show-options-button"><img src="gear.svg"></div>
 		<div id="clock">
-			{{clock | date : "hh:mm:ss a"}}
+			{{clock | date : "MMM d, hh:mm:ss a"}}
 		</div>
 
 	</section>
 
-	<section class="headlines">
+	<section class="headlines" ng-show="isCurrentDay && isCurrentLocation && !showOptions">
 		<div id="currentPrayer">
 			CURRENT PRAYER
 		</div>
@@ -95,25 +96,35 @@ angular.module('prayerApp', ['google.places'])
 			}
 		}
 	}])
-	.controller('prayerCtrl', ['$scope', '$http', '$timeout', '$interval', 'TimezoneSearcher', function($scope, $http, $timeout, $interval, TimezoneSearcher){	
+	.controller('prayerCtrl', ['$scope', '$http', '$timeout', '$interval', 'TimezoneSearcher', function($scope, $http, $timeout, $interval, TimezoneSearcher){
+
+		$scope.$watch("newDate", function(newVal, oldVal){
+			if(typeof newVal !== "undefined"){
+				$scope.currentDay = newVal;
+				getPrayerTimes($scope.currentDay, $scope.latitude, $scope.longitude, $scope.prayerOffset);
+			}
+		})
 
 		$scope.$watch("place", function(newVal, oldVal){
 			if(typeof newVal == "object"){
 				$scope.latitude = newVal.geometry.location.lat();
 				$scope.longitude = newVal.geometry.location.lng();
 
-				var d = new Date();
-				var offset = d.getTimezoneOffset();
-				var prayerOffset = offset / 60 * -1;
-
 				TimezoneSearcher.getTimeZone( $scope.latitude, $scope.longitude, Date.now()/1000 ).then(
 				function(results){
-					console.log(results);
-					getPrayerTimes(d, $scope.latitude, $scope.longitude, results.data.rawOffset / 3600);
+					var newOffset = results.data.rawOffset / 3600
+					if($scope.initialPrayerOffset != newOffset){
+						$scope.isCurrentLocation = false;
+					}
+					else{
+						$scope.isCurrentLocation = true;
+					}
+					getPrayerTimes($scope.currentDay, $scope.latitude, $scope.longitude, newOffset);
+					$scope.prayerOffset = newOffset;
 				},
 				function(error){
 					console.log("error");
-					getPrayerTimes(d, $scope.latitude, $scope.longitude, prayerOffset);
+					getPrayerTimes($scope.currentDay, $scope.latitude, $scope.longitude, $scope.prayerOffset);
 				})
 
 
@@ -169,15 +180,14 @@ angular.module('prayerApp', ['google.places'])
 				navigator.geolocation.getCurrentPosition(function(position){
 					$scope.latitude = position.coords.latitude;
 					$scope.longitude = position.coords.longitude;
-					var d = new Date();
-					var offset = d.getTimezoneOffset();
-					var prayerOffset = offset / 60 * -1;
-					$scope.$apply(getPrayerTimes(d, $scope.latitude, $scope.longitude, prayerOffset));
+
+					$scope.$apply(getPrayerTimes($scope.currentDay, $scope.latitude, $scope.longitude, $scope.prayerOffset));
 				},
 				function(error){
 					console.log("ERROR");
 					console.log(error);	
 					$scope.showOptions = true;
+
 				},
 				{enableHighAccuracy:true, maximumAge:30000, timeout:27000});
 			}
@@ -326,11 +336,9 @@ angular.module('prayerApp', ['google.places'])
 		var setUpArrays = function(){
 			$scope.prayerTimesDisplayArray = filterPrayerTimesForDisplay($scope.times);
 			$scope.prayerTimesCalcArray = filterPrayerTimesForCalculations($scope.prayerTimesDisplayArray);
-			console.log($scope.prayerTimesDisplayArray);
 		}
 
 		var getPrayerTimes = function(date, latitude, longitude, prayerOffset){
-			console.log(prayerOffset);
 			$scope.times = prayTimes.getTimes(date, [latitude, longitude], prayerOffset);
 			prayerTimesSet = true;
 
@@ -340,6 +348,14 @@ angular.module('prayerApp', ['google.places'])
 		}
 
 		var prayerTimesSet = false;
+		$scope.isCurrentDay = true;
+		$scope.isCurrentLocation = true;
+		$scope.today = new Date();
+		$scope.currentDay = new Date();
+		var offset = $scope.currentDay.getTimezoneOffset();
+		$scope.prayerOffset = offset / 60 * -1;
+		$scope.initialPrayerOffset = $scope.prayerOffset;
+
 		var init = function(){
 			prayTimes.setMethod("ISNA");
 			setUpTime();
