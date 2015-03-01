@@ -47,11 +47,15 @@ table {
 	border-spacing: 0;
 }
 
+
+[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
+}
+
 body, h1, h2, h3 {
 	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
 	font-weight: 300;
 	font-size: 24px;
-	color: white;
 }
 
 html, body, #main {
@@ -67,13 +71,19 @@ html, body, #main {
 	max-width: 960px;
 	margin: 0 auto;
 	position: relative;
+	color: white;
+	background: #444
+}
+
+.show-options-button{
+
 }
 
 #clock, #currentPrayer, #currentPrayerTime, #till {
 	text-align: center;
 }
 
-#clock {
+.header {
 	padding-top: 10px;
 }
 
@@ -128,5 +138,15 @@ html, body, #main {
 	width: 50%;
 	box-sizing: border-box;
 	padding-bottom: 10px;
+}
+
+input {
+	width: 90%;
+	height: 24px;
+	font-size: 16px;
+	box-sizing: border-box;
+	text-align: center;
+	margin: 0 auto;
+	margin-left: 5%
 }
 

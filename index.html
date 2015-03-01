@@ -4,14 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, user-scalable=no">
   <link rel="stylesheet" type="text/css" href="style.css">
+  <link rel="stylesheet" type="text/css" href="autocomplete.css">
 </head>
 <body ng-controller="prayerCtrl">
 
-<div id="main" style="background: linear-gradient(to bottom, {{topColor}}, {{bottomColor}}">
+<div id="main" ng-cloak style="background: linear-gradient(to bottom, {{topColor}}, {{bottomColor}}">
 
-	<div id="clock">
-		{{clock | date : "hh:mm:ss a"}}
-	</div>
+	<section ng-show="showOptions">
+		<input type="text" placeholder="Enter your location" g-places-autocomplete ng-model="place" />
+	</section>
+
+	<section class="header">
+		<div ng-click="showOptionsView(true)" class="show-options-button"><img src="gear.svg"></div>
+		<div id="clock">
+			{{clock | date : "hh:mm:ss a"}}
+		</div>
+
+	</section>
 
 	<section class="headlines">
 		<div id="currentPrayer">
@@ -52,10 +61,21 @@
 </div>
 
 <script type="text/javascript" src="praytimes.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?libraries=places"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.13/angular.min.js"></script>
+<script src="autocomplete.js"></script>
 <script type="text/javascript">
-angular.module('prayerApp', [])
+angular.module('prayerApp', ['google.places'])
 	.controller('prayerCtrl', ['$scope', '$http', '$timeout', '$interval', function($scope, $http, $timeout, $interval){
+
+		$scope.$watch("place", function(newVal, oldVal){
+			if(typeof newVal == "object"){
+				$scope.latitude = newVal.geometry.location.lat();
+				$scope.longitude = newVal.geometry.location.lng();
+
+				getPrayerTimes(new Date(), $scope.latitude, $scope.longitude);
+			}
+		})
 
 		var colors = {
 			Fajr: { start: {r: 154, g: 94, b: 247}, end: {r: 247, g: 145, b: 111} },
@@ -96,8 +116,6 @@ angular.module('prayerApp', [])
 
 		var setColor = function(){
 			var percentageOfSectionPassed = ($scope.minutesSinceStart*100) / ($scope.minutesSinceStart + $scope.minutesTillNext)/2 + 50;
-			console.log($scope.minutesSinceStart);
-			console.log($scope.minutesTillNext);
 			$scope.topColor = convertToHexString(colors[$scope.currentPrayerName].start)
 			$scope.bottomColor = convertToHexString(makeGradientColor(colors[$scope.currentPrayerName].start, colors[$scope.currentPrayerName].end, percentageOfSectionPassed));
 		}
@@ -108,11 +126,12 @@ angular.module('prayerApp', [])
 				navigator.geolocation.getCurrentPosition(function(position){
 					$scope.latitude = position.coords.latitude;
 					$scope.longitude = position.coords.longitude;
-					$scope.$apply(getPrayerTimes());
+					$scope.$apply(getPrayerTimes(new Date(), $scope.latitude, $scope.longitude));
 				},
 				function(error){
 					console.log("ERROR");
 					console.log(error);	
+					$scope.showOptions = true;
 				},
 				{enableHighAccuracy:true, maximumAge:30000, timeout:27000});
 			}
@@ -166,6 +185,9 @@ angular.module('prayerApp', [])
 			$scope.clock = d.getTime();
 			var timeNow = new Date($scope.clock);
 			var timeNowDecimal = timeNow.getHours() + timeNow.getMinutes()/60;
+			
+			if(!prayerTimesSet){ return; }
+
 			getCurrentAndNextPrayer(timeNowDecimal);
 
 			if(secondCounter >= 30){
@@ -245,8 +267,6 @@ angular.module('prayerApp', [])
 		}
 
 		var getCurrentAndNextPrayer = function(timeNowDecimal){
-			if(!prayerTimesSet){ return; }
-
 			var nextPrayerIndex = calculateNextPrayerIndex(timeNowDecimal, $scope.prayerTimesCalcArray);
 			var currentPrayerIndex = 0;
 
@@ -254,7 +274,6 @@ angular.module('prayerApp', [])
 			if(currentPrayerIndex < 0) currentPrayerIndex = 5;
 			if(nextPrayerIndex == 1) nextPrayerIndex = 2;
 
-			// console.log("C"+timeNowDecimal + " - " + currentPrayerIndex + '|' + nextPrayerIndex);
 			formatHeadlineText(currentPrayerIndex, nextPrayerIndex, timeNowDecimal);
 		}
 
@@ -264,102 +283,33 @@ angular.module('prayerApp', [])
 			console.log($scope.prayerTimesDisplayArray);
 		}
 
-		var getPrayerTimes = function(){
-			var d = new Date();
-			var offset = d.getTimezoneOffset();
+		var getPrayerTimes = function(date, latitude, longitude){
+			var offset = date.getTimezoneOffset();
 			var prayerOffset = offset / 60 * -1;
-			$scope.times = prayTimes.getTimes(d, [$scope.latitude, $scope.longitude], prayerOffset);
+			prayerOffset = -7;
+
+			// console.log(prayerOffset);
+
+			$scope.times = prayTimes.getTimes(date, [latitude, longitude], prayerOffset);
 			prayerTimesSet = true;
 
 			setUpArrays();
 			onUpdateTime();
 			setColor();
-			// runTests();
 		}
 
 		var prayerTimesSet = false;
 		var init = function(){
+			prayTimes.setMethod("ISNA");
 			setUpTime();
 			getLocation();
 		}
 
-		init();
-
-		// test code
-		var runTests = function(){
-			console.log("\n0.0 - 5|0");
-			getCurrentAndNextPrayer("0.0")
-
-			console.log("\n1.0 - 5|0");
-			getCurrentAndNextPrayer("1.0")
-
-			console.log("\n2.0 - 5|0");
-			getCurrentAndNextPrayer("2.0")
-
-			console.log("\n3.0 - 5|0");
-			getCurrentAndNextPrayer("3.0")
-
-			console.log("\n4.0 - 5|0");
-			getCurrentAndNextPrayer("4.0")
-
-			console.log("\n5.0 - 5|0");
-			getCurrentAndNextPrayer("5.0")
-
-			console.log("\n6.0 - 0|*");
-			getCurrentAndNextPrayer("6.0")
-
-			console.log("\n7.0 - *|2");
-			getCurrentAndNextPrayer("7.0")
-
-			console.log("\n8.0 - *|2");
-			getCurrentAndNextPrayer("8.0")
-
-			console.log("\n9.0 - *|2");
-			getCurrentAndNextPrayer("9.0")
-
-			console.log("\n10.0 - *|2");
-			getCurrentAndNextPrayer("10.0")
-
-			console.log("\n11.0 - *|2");
-			getCurrentAndNextPrayer("11.0")
-
-			console.log("\n12.0 - *|2");
-			getCurrentAndNextPrayer("12.0")
-
-			console.log("\n13.0 - 2|3");
-			getCurrentAndNextPrayer("13.0")
-
-			console.log("\n14.0 - 2|3");
-			getCurrentAndNextPrayer("14.0")
-
-			console.log("\n15.0 - 2|3");
-			getCurrentAndNextPrayer("15.0")
-
-			console.log("\n16.0 - 3|4");
-			getCurrentAndNextPrayer("16.0")
-
-			console.log("\n17.0 - 3|4");
-			getCurrentAndNextPrayer("17.0")
-
-			console.log("\n18.0 - 4|5");
-			getCurrentAndNextPrayer("18.0")
-
-			console.log("\n19.0 - 5|0");
-			getCurrentAndNextPrayer("19.0")
-
-			console.log("\n20.0 - 5|0");
-			getCurrentAndNextPrayer("20.0")
-
-			console.log("\n21.0 - 5|0");
-			getCurrentAndNextPrayer("21.0")
-
-			console.log("\n22.0 - 5|0");
-			getCurrentAndNextPrayer("22.0")
-
-			console.log("\n23.0 - 5|0");
-			getCurrentAndNextPrayer("23.0")
-
+		$scope.showOptionsView = function(show){
+			$scope.showOptions = show;
 		}
+
+		init();
 
 	}])
 		
