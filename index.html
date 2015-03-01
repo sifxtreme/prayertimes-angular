@@ -15,7 +15,7 @@
 	</section>
 
 	<section class="header">
-		<div ng-click="showOptionsView(true)" class="show-options-button"><img src="gear.svg"></div>
+		<div ng-click="showOptionsView()" class="show-options-button"><img src="gear.svg"></div>
 		<div id="clock">
 			{{clock | date : "hh:mm:ss a"}}
 		</div>
@@ -66,14 +66,57 @@
 <script src="autocomplete.js"></script>
 <script type="text/javascript">
 angular.module('prayerApp', ['google.places'])
-	.controller('prayerCtrl', ['$scope', '$http', '$timeout', '$interval', function($scope, $http, $timeout, $interval){
+
+	.factory('TimezoneSearcher', ['$http', '$q', function($http, $q){
+		var googleUrl = "https://maps.googleapis.com/maps/api/timezone/json?location=39.6034810,-119.6822510&timestamp=1331766000"
+		var googleUrl = "http://maps.googleapis.com/maps/api/geocode/json?sensor=false&address="
+
+		return {
+			getTimeZone: function(latitude, longitude, timestamp){
+				var deferred = $q.defer();
+
+				var url = "https://maps.googleapis.com/maps/api/timezone/json?location=" + latitude + "," + longitude + "&timestamp="+timestamp
+
+				$http.get(url)
+				.success(function(data, status){
+
+					deferred.resolve({
+						data: data
+					});
+
+				})
+				.error(function(data, status){
+					deferred.reject(msg);
+					console.log(data);
+					console.log(status);
+				})
+
+				return deferred.promise;
+			}
+		}
+	}])
+	.controller('prayerCtrl', ['$scope', '$http', '$timeout', '$interval', 'TimezoneSearcher', function($scope, $http, $timeout, $interval, TimezoneSearcher){	
 
 		$scope.$watch("place", function(newVal, oldVal){
 			if(typeof newVal == "object"){
 				$scope.latitude = newVal.geometry.location.lat();
 				$scope.longitude = newVal.geometry.location.lng();
 
-				getPrayerTimes(new Date(), $scope.latitude, $scope.longitude);
+				var d = new Date();
+				var offset = d.getTimezoneOffset();
+				var prayerOffset = offset / 60 * -1;
+
+				TimezoneSearcher.getTimeZone( $scope.latitude, $scope.longitude, Date.now()/1000 ).then(
+				function(results){
+					console.log(results);
+					getPrayerTimes(d, $scope.latitude, $scope.longitude, results.data.rawOffset / 3600);
+				},
+				function(error){
+					console.log("error");
+					getPrayerTimes(d, $scope.latitude, $scope.longitude, prayerOffset);
+				})
+
+
 			}
 		})
 
@@ -126,7 +169,10 @@ angular.module('prayerApp', ['google.places'])
 				navigator.geolocation.getCurrentPosition(function(position){
 					$scope.latitude = position.coords.latitude;
 					$scope.longitude = position.coords.longitude;
-					$scope.$apply(getPrayerTimes(new Date(), $scope.latitude, $scope.longitude));
+					var d = new Date();
+					var offset = d.getTimezoneOffset();
+					var prayerOffset = offset / 60 * -1;
+					$scope.$apply(getPrayerTimes(d, $scope.latitude, $scope.longitude, prayerOffset));
 				},
 				function(error){
 					console.log("ERROR");
@@ -283,13 +329,8 @@ angular.module('prayerApp', ['google.places'])
 			console.log($scope.prayerTimesDisplayArray);
 		}
 
-		var getPrayerTimes = function(date, latitude, longitude){
-			var offset = date.getTimezoneOffset();
-			var prayerOffset = offset / 60 * -1;
-			prayerOffset = -7;
-
-			// console.log(prayerOffset);
-
+		var getPrayerTimes = function(date, latitude, longitude, prayerOffset){
+			console.log(prayerOffset);
 			$scope.times = prayTimes.getTimes(date, [latitude, longitude], prayerOffset);
 			prayerTimesSet = true;
 
@@ -305,8 +346,8 @@ angular.module('prayerApp', ['google.places'])
 			getLocation();
 		}
 
-		$scope.showOptionsView = function(show){
-			$scope.showOptions = show;
+		$scope.showOptionsView = function(){
+			$scope.showOptions = !$scope.showOptions;
 		}
 
 		init();

@@ -75,7 +75,11 @@ html, body, #main {
 	background: #444
 }
 
-.show-options-button{
+.show-options-button img{
+	position: absolute;
+	top: 5px;
+	left: 5px;
+	width: 25px;
 
 }
 
