@@ -1,14 +1,12 @@
 angular.module('prayerApp', ['google.places'])
 
 	.factory('TimezoneSearcher', ['$http', '$q', function($http, $q){
-		var googleUrl = "https://maps.googleapis.com/maps/api/timezone/json?location=39.6034810,-119.6822510&timestamp=1331766000"
-		var googleUrl = "http://maps.googleapis.com/maps/api/geocode/json?sensor=false&address="
 
 		return {
 			getTimeZone: function(latitude, longitude, timestamp){
 				var deferred = $q.defer();
 
-				var url = "https://maps.googleapis.com/maps/api/timezone/json?location=" + latitude + "," + longitude + "&timestamp="+timestamp
+				var url = "https://maps.googleapis.com/maps/api/timezone/json?location=" + latitude + "," + longitude + "&timestamp="+timestamp;
 
 				$http.get(url)
 				.success(function(data, status){
@@ -19,7 +17,6 @@ angular.module('prayerApp', ['google.places'])
 
 				})
 				.error(function(data, status){
-					deferred.reject(msg);
 					console.log(data);
 					console.log(status);
 				})
@@ -69,7 +66,7 @@ angular.module('prayerApp', ['google.places'])
 		var timeZone = function(){
 			TimezoneSearcher.getTimeZone( $scope.latitude, $scope.longitude, Date.now()/1000 ).then(
 			function(results){
-				var newOffset = results.data.rawOffset / 3600
+				var newOffset = (results.data.rawOffset + results.data.dstOffset) / 3600
 				if($scope.initialPrayerOffset != newOffset){
 					$scope.isCurrentLocation = false;
 				}
@@ -144,7 +141,7 @@ angular.module('prayerApp', ['google.places'])
 
 		var getLocation = function(){
 			if(navigator.geolocation){
-				console.log("getLocation");
+				// console.log("getLocation");
 				navigator.geolocation.getCurrentPosition(function(position){
 					$scope.latitude = position.coords.latitude;
 					$scope.longitude = position.coords.longitude;
@@ -322,6 +319,7 @@ angular.module('prayerApp', ['google.places'])
 		}
 
 		var getPrayerTimes = function(date, latitude, longitude, prayerOffset){
+
 			$scope.times = prayTimes.getTimes(date, [latitude, longitude], prayerOffset);
 			prayerTimesSet = true;
 

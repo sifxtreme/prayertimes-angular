@@ -251,7 +251,9 @@ function PrayTimes(method) {
 			timezone = this.getTimeZone(date);
 		if (typeof(dst) == 'undefined' || dst == 'auto') 
 			dst = this.getDst(date);
+		dst = 0;
 		timeZone = 1* timezone+ (1* dst ? 1 : 0);
+		console.log()
 		jDate = this.julian(date[0], date[1], date[2])- lng/ (15* 24);
 		
 		return this.computeTimes();
