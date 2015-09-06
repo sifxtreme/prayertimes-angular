@@ -23,9 +23,9 @@
 
 </script>
 </head>
-<body ng-controller="prayerCtrl">
+<body ng-controller="prayerCtrl" style="background: -webkit-linear-gradient(to bottom, {{topColor}}, {{bottomColor}}); background: -o-linear-gradient(to bottom, {{topColor}}, {{bottomColor}}); background: -moz-linear-gradient(to bottom, {{topColor}}, {{bottomColor}}); background: linear-gradient(to bottom, {{topColor}}, {{bottomColor}});">
 
-<div id="main" ng-cloak style="background: -webkit-linear-gradient(to bottom, {{topColor}}, {{bottomColor}}); background: -o-linear-gradient(to bottom, {{topColor}}, {{bottomColor}}); background: -moz-linear-gradient(to bottom, {{topColor}}, {{bottomColor}}); background: linear-gradient(to bottom, {{topColor}}, {{bottomColor}});">
+<div id="main" ng-cloak>
 
 	<section class="header">
 		<div ng-click="showOptionsView()" class="show-options-button"><img src="gear.svg"></div>

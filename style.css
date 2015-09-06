@@ -62,6 +62,10 @@ html, body, #main {
 	height: 100%;
 }
 
+body {
+	background: #444
+}
+
 #test {
 	display: none;
 }
@@ -72,7 +76,6 @@ html, body, #main {
 	margin: 0 auto;
 	position: relative;
 	color: white;
-	background: #444
 }
 
 .show-options-button img{
@@ -108,7 +111,7 @@ html, body, #main {
 	top: 50%;
 	left: 0;
 	right: 0;
-	position: fixed;
+	position: absolute;
 	margin-top: -96px;
 	font-size: 18px;
 }
@@ -135,7 +138,7 @@ html, body, #main {
 }
 
 #times section {
-	position: fixed;
+	position: absolute;
 	bottom: 0;
 	width: 100%;
 	max-width: 960px;
